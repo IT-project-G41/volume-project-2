@@ -1,0 +1,2 @@
+Assets/OriginalParametersStippleTexture.asset filter=lfs diff=lfs merge=lfs -text
+Assets/StippleTextureForDebug.asset filter=lfs diff=lfs merge=lfs -text
