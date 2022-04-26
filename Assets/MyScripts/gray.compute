@@ -1,0 +1,29 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel LaplaceOperator
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture3D<float4> Result_1;
+Texture3D<float4> Texture;
+
+RWTexture2D<float4> Result2D;
+RWTexture3D<float4> Result3D;
+
+RWStructuredBuffer<float> buffer;
+
+[numthreads(32, 16, 1)]
+void LaplaceOperator(uint3 id : SV_DispatchThreadID)
+{   
+    uint3 pos = uint3(id.x, id.y, 0);
+    
+    float a = Texture[id.xyz].a;
+    float4 testGray = float4(0.2126, 0.7152, 0.0722, 0);
+    float gray = dot(Texture[id.xyz], testGray);
+    Result3D[id.xyz] = float4(gray, gray, gray, a);
+    
+    Result2D[id.xy] = float4(0.2126, 0.7152, 0.0722, 0);
+    
+    Result_1[id.xyz] = float4(gray, gray, gray, a);
+    //Result_1[id.xyz] = float4(0.2126, 0.7152, 0.0722, a);
+    buffer[id.x] = gray;
+}
