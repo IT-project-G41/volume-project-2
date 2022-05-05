@@ -213,7 +213,6 @@ Transform:
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
@@ -510,7 +509,6 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -545,7 +543,6 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.020618387, y: 1.3036351, z: -8.169205}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 5
@@ -561,7 +558,6 @@ MeshRenderer:
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -612,8 +608,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35ad37df05ac440448bc160f28c2b981, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initTexture3D: {fileID: 11700000, guid: 33d242329f080214ab60e9988a865c03, type: 2}
+  typeofVolume: 0
+  file: Orange
+  initTexture3D: {fileID: 0}
   computeShader: {fileID: 7200000, guid: dc010153be588fd429a3b3081b186565, type: 3}
+  high: 256
+  low: 0
   shader: {fileID: 4800000, guid: ace69cb5eebacdc4b8447b347c033513, type: 3}
   threshold: 0.88
   intensity: 1.5
@@ -631,7 +631,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1394433519}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 589db8ddae9ef6f40819eace4a356152, type: 3}
   m_Name: 

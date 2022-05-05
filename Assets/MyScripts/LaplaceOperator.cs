@@ -8,6 +8,15 @@ using UnityEngine.UI;
 [RequireComponent(typeof(MeshRenderer))]
 public class LaplaceOperator : MonoBehaviour
 {
+    [SerializeField]
+    DicomGrid dataObject = new DicomGrid();
+
+    public enum TypeofVolume { PVM, DCM };
+    public TypeofVolume typeofVolume;
+
+    [SerializeField]
+    private string file = "TestDicomData";
+
     [SerializeField] private Texture3D initTexture3D;
 
     private RawImage _renderer;
@@ -15,6 +24,9 @@ public class LaplaceOperator : MonoBehaviour
 
     [SerializeField]
     private ComputeShader computeShader;
+    
+    public int high;
+    public int low;
 
     [SerializeField] protected Shader shader;
     [Range(0f, 1f)] public float threshold = 0.5f;
@@ -42,8 +54,36 @@ public class LaplaceOperator : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
+        TextAsset mytxtData = (TextAsset)Resources.Load(file);
+        if (typeofVolume == TypeofVolume.DCM)
+        {
+            // logic for a dicom
+            dataObject = JsonUtility.FromJson<DicomGrid>(mytxtData.text);
+        }
+        else if (typeofVolume == TypeofVolume.PVM)
+        {
+            PVMData temp = JsonUtility.FromJson<PVMData>(mytxtData.text);
+
+            dataObject.buffer = temp.data;
+            dataObject.width = temp.width;
+            dataObject.height = temp.height;
+            dataObject.breath = temp.breath;
+        }
+    }
+
+    protected virtual void Start()
+    {
+        if (initTexture3D == null)
+            initTexture3D = GetAsTexture3DOneByte(low, high);
+
+        // if there is a volume then start to render the object
+        if (initTexture3D != null)
+        {
+            this.StartMethod();
+        }
+
         if (!SystemInfo.supportsComputeShaders)
         {
             Debug.LogError("Comppute Shader is not support.");
@@ -52,12 +92,6 @@ public class LaplaceOperator : MonoBehaviour
         else
         {
             Debug.Log("Start Laplace Operator 1");
-        }
-
-        if (initTexture3D == null)
-        {
-            Debug.Log("Load Original Parameters Stipple Texture");
-            initTexture3D = AssetDatabase.LoadAssetAtPath("Assets/OriginalParametersStippleTexture.asset", typeof(Texture3D)) as Texture3D; 
         }
 
         CreateRenderTexture();
@@ -69,6 +103,45 @@ public class LaplaceOperator : MonoBehaviour
         {
             this.StartMethod();
         }
+    }
+
+    public Texture3D GetAsTexture3DOneByte(int lowThreashold = 0, int highThreashhold = 1500)
+    {
+        Texture3D texture = new Texture3D(dataObject.width, dataObject.height, dataObject.breath, TextureFormat.ARGB32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear,
+            anisoLevel = 0
+        };
+
+        Color32[] colors = new Color32[dataObject.buffer.Length];
+
+        for (int index = 0; index < dataObject.buffer.Length; index++)
+        {
+            float debug = (float)(dataObject.buffer[index] - lowThreashold) / (highThreashhold - lowThreashold) * (float)byte.MaxValue;
+
+            if (debug < byte.MinValue)
+                debug = byte.MinValue;
+            else if (debug > byte.MaxValue)
+                debug = byte.MaxValue;
+
+            try
+            {
+                colors[index] = new Color32(0, 0, 0, System.Convert.ToByte(debug));
+            }
+            catch (System.OverflowException ex)
+            {
+                Debug.Log(debug);
+                colors[index] = new Color32(0, 0, 0, byte.MaxValue);
+                break;
+            }
+        }
+
+        // set the information we created before
+        texture.SetPixels32(colors, 0);
+        texture.Apply();
+
+        return texture;
     }
 
     // Update is called once per frame
@@ -160,7 +233,7 @@ public class LaplaceOperator : MonoBehaviour
     private void StartMethod()
     {
         material = new Material(shader);
-        material.renderQueue = 3000;     //将材质队列修改为3000
+        material.renderQueue = 3000;
         GetComponent<MeshFilter>().sharedMesh = Build();
         GetComponent<MeshRenderer>().sharedMaterial = material;
         hasStarted = true;
@@ -170,7 +243,6 @@ public class LaplaceOperator : MonoBehaviour
     Mesh Build()
     {
         // the verties for the final cube
-        // 定义一个Vector3数组，分别指向一个正方体的四个顶点
         var vertices = new Vector3[] {
                 new Vector3 (-0.5f, -0.5f, -0.5f),
                 new Vector3 ( 0.5f, -0.5f, -0.5f),

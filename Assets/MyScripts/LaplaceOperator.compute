@@ -141,11 +141,11 @@ void LaplaceOperator (uint3 id : SV_DispatchThreadID)
     
     float4 testGray = float4(0.2126, 0.7152, 0.0722, 0);
     float gray = dot(Texture[id.xyz], testGray);
-    Result3D[id.xyz] = float4(gray, gray, gray, a);
+    Result3D[id.xyz] = float4(gray, gray, gray, Texture[id.xyz].a);
     
     Result2D[id.xy] = float4(0.2126, 0.7152, 0.0722, 0);
     
-    Result_1[id.xyz] = float4(temp, temp, temp, a);
+    Result_1[id.xyz] = float4(temp, temp, temp, Texture[id.xyz].a);
     //Result_1[id.xyz] = float4(0.2126, 0.7152, 0.0722, a);
     buffer[id.x] = temp;
 }
