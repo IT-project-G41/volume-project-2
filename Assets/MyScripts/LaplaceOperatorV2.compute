@@ -1,0 +1,76 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel LaplaceOperatorV2
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture3D<float4> Result;
+Texture3D<float4> Texture;
+
+[numthreads(8,8,1)]
+void LaplaceOperatorV2(uint3 id : SV_DispatchThreadID)
+{
+    // https://en.wikipedia.org/wiki/Discrete_Laplace_operator
+    float3x3 plane1Fliter = float3x3(0, 0, 0, 0, 1, 0, 0, 0, 0);
+    float3x3 plane2Fliter = float3x3(0, 1, 0, 1, -6, 1, 0, 1, 0);
+    float3x3 plane3Fliter = float3x3(0, 0, 0, 0, 1, 0, 0, 0, 0);
+
+    float4 rgb2gray = float4(0.2126, 0.7152, 0.0722, 0);
+    
+    float plane1Arrays[9] =
+    {
+        dot(Texture[id.xyz + int3(-1, 1, -1)], rgb2gray) * plane1Fliter[0][0],
+        dot(Texture[id.xyz + int3(0, 1, -1)], rgb2gray) * plane1Fliter[0][1],
+        dot(Texture[id.xyz + int3(1, 1, -1)], rgb2gray) * plane1Fliter[0][2],
+        dot(Texture[id.xyz + int3(-1, 1, 0)], rgb2gray) * plane1Fliter[1][0],
+        dot(Texture[id.xyz + int3(0, 1, 0)], rgb2gray) * plane1Fliter[1][1],
+        dot(Texture[id.xyz + int3(1, 1, 0)], rgb2gray) * plane1Fliter[1][2],
+        dot(Texture[id.xyz + int3(-1, 1, 0)], rgb2gray) * plane1Fliter[2][0],
+        dot(Texture[id.xyz + int3(0, 1, 0)], rgb2gray) * plane1Fliter[2][1],
+        dot(Texture[id.xyz + int3(1, 1, 0)], rgb2gray) * plane1Fliter[2][2]
+    };
+    
+    float plane2Arrays[9] =
+    {
+        dot(Texture[id.xyz + int3(-1, 0, -1)], rgb2gray) * plane2Fliter[0][0],
+        dot(Texture[id.xyz + int3(0, 0, -1)], rgb2gray) * plane2Fliter[0][1],
+        dot(Texture[id.xyz + int3(1, 0, -1)], rgb2gray) * plane2Fliter[0][2],
+        dot(Texture[id.xyz + int3(-1, 0, 0)], rgb2gray) * plane2Fliter[1][0],
+        dot(Texture[id.xyz + int3(0, 0, 0)], rgb2gray) * plane2Fliter[1][1],
+        dot(Texture[id.xyz + int3(1, 0, 0)], rgb2gray) * plane2Fliter[1][2],
+        dot(Texture[id.xyz + int3(-1, 0, 1)], rgb2gray) * plane2Fliter[2][0],
+        dot(Texture[id.xyz + int3(0, 0, 1)], rgb2gray) * plane2Fliter[2][1],
+        dot(Texture[id.xyz + int3(1, 0, 1)], rgb2gray) * plane2Fliter[2][2]
+    };
+    
+    float plane3Arrays[9] =
+    {
+        dot(Texture[id.xyz + int3(-1, -1, -1)], rgb2gray) * plane3Fliter[0][0],
+        dot(Texture[id.xyz + int3(0, -1, -1)], rgb2gray) * plane3Fliter[0][1],
+        dot(Texture[id.xyz + int3(1, -1, -1)], rgb2gray) * plane3Fliter[0][2],
+        dot(Texture[id.xyz + int3(-1, -1, 0)], rgb2gray) * plane3Fliter[1][0],
+        dot(Texture[id.xyz + int3(0, -1, 0)], rgb2gray) * plane3Fliter[1][1],
+        dot(Texture[id.xyz + int3(1, -1, 0)], rgb2gray) * plane3Fliter[1][2],
+        dot(Texture[id.xyz + int3(-1, -1, 1)], rgb2gray) * plane3Fliter[2][0],
+        dot(Texture[id.xyz + int3(0, -1, 1)], rgb2gray) * plane3Fliter[2][1],
+        dot(Texture[id.xyz + int3(1, -1, 1)], rgb2gray) * plane3Fliter[2][2]
+    };
+    
+    float resultArrays[27] =
+    {
+        plane1Arrays,
+        plane2Arrays,
+        plane3Arrays
+    };
+    
+    float temp = 0;
+    for (int i = 0; i < 9 * 3; i++)
+    {
+        temp += resultArrays[i];
+    }
+
+    float a = Texture[id.xyz].a;
+    
+    uint3 pos = uint3(id.x, id.y, 0);
+    
+    Result[id.xyz] = float4(temp, temp, temp, a);
+}

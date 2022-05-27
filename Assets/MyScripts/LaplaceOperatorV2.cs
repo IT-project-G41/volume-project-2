@@ -1,9 +1,9 @@
-Ôªøusing System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public class StipplingVolumeManager : MonoBehaviour
+public class LaplaceOperatorV2 : MonoBehaviour
 {
     #region volume
 
@@ -31,7 +31,7 @@ public class StipplingVolumeManager : MonoBehaviour
     #region fileReading
 
     public enum TypeofVolume { PVM, DCM, SDF_Sphere };
-    public TypeofVolume typeofVolume;
+    public StipplingVolumeManager.TypeofVolume typeofVolume;
 
     [SerializeField]
     private string file = "TestDicomData";
@@ -43,16 +43,31 @@ public class StipplingVolumeManager : MonoBehaviour
     [SerializeField]
     VolumetricColorAndIntensityPicker[] Colors;
 
+    [SerializeField] private ComputeShader laplaceComputeShader;
+    struct ThreadSize
+    {
+        public uint x;
+        public uint y;
+        public uint z;
+
+        public ThreadSize(uint x, uint y, uint z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
     // Start is called before the first frame update
     void Awake()
     {
         TextAsset mytxtData = (TextAsset)Resources.Load(file);
-        if (typeofVolume == TypeofVolume.DCM)
+        if (typeofVolume == StipplingVolumeManager.TypeofVolume.DCM)
         {
             // logic for a dicom
             dataObject = JsonUtility.FromJson<DicomGrid>(mytxtData.text);
         }
-        else if (typeofVolume == TypeofVolume.PVM)
+        else if (typeofVolume == StipplingVolumeManager.TypeofVolume.PVM)
         {
             PVMData temp = JsonUtility.FromJson<PVMData>(mytxtData.text);
 
@@ -84,7 +99,7 @@ public class StipplingVolumeManager : MonoBehaviour
     private void StartMethod()
     {
         material = new Material(shader);
-        material.renderQueue = 3000;     //Â∞ÜÊùêË¥®ÈòüÂàó‰øÆÊîπ‰∏∫3000
+        material.renderQueue = 3000;     //Ω´≤ƒ÷ ∂”¡––ﬁ∏ƒŒ™3000
         GetComponent<MeshFilter>().sharedMesh = Build();
         GetComponent<MeshRenderer>().sharedMaterial = material;
         hasStarted = true;
@@ -115,7 +130,7 @@ public class StipplingVolumeManager : MonoBehaviour
     Mesh Build()
     {
         // the verties for the final cube
-        // ÂÆö‰πâ‰∏Ä‰∏™Vector3Êï∞ÁªÑÔºåÂàÜÂà´ÊåáÂêë‰∏Ä‰∏™Ê≠£Êñπ‰ΩìÁöÑÂõõ‰∏™È°∂ÁÇπ
+        // ∂®“Â“ª∏ˆVector3 ˝◊È£¨∑÷±÷∏œÚ“ª∏ˆ’˝∑ΩÃÂµƒÀƒ∏ˆ∂•µ„
         var vertices = new Vector3[] {
                 new Vector3 (-0.5f, -0.5f, -0.5f),
                 new Vector3 ( 0.5f, -0.5f, -0.5f),
@@ -147,20 +162,21 @@ public class StipplingVolumeManager : MonoBehaviour
         var mesh = new Mesh();
         mesh.vertices = vertices;
         mesh.triangles = triangles;
-        mesh.RecalculateNormals();  // ÈáçÊñ∞ËÆ°ÁÆóÊ≥ïÁ∫øÊñπÂêë
+        mesh.RecalculateNormals();  // ÷ÿ–¬º∆À„∑®œﬂ∑ΩœÚ
         mesh.hideFlags = HideFlags.HideAndDontSave;
 
         return mesh;
     }
 
-    public Texture3D CreateStippleTexture(uint minThreashold, uint maxThreashold, int resulition, float OddsOfStipple = 1f)
+    public RenderTexture CreateStippleTexture(uint minThreashold, uint maxThreashold, int resulition, float OddsOfStipple = 1f)
     {
         if (OddsOfStipple > 1)
         {
             OddsOfStipple = 1;
-        }else if (OddsOfStipple < 0)
+        }
+        else if (OddsOfStipple < 0)
         {
-             OddsOfStipple = 0;
+            OddsOfStipple = 0;
         };
 
         Texture3D texture = new Texture3D(resulition, resulition, resulition, TextureFormat.ARGB32, false)
@@ -173,7 +189,7 @@ public class StipplingVolumeManager : MonoBehaviour
         int length = resulition * resulition * resulition;
         Color32[] colors = new Color32[length];
         Debug.Log(length);
-        
+
         for (int index = 0; index < length; index++)
         {
             // Get the position
@@ -195,7 +211,7 @@ public class StipplingVolumeManager : MonoBehaviour
             }
 
             // work out when 
-            while (i < Colors.Length -1 &&
+            while (i < Colors.Length - 1 &&
                 !(Colors[i].density < dataAt && Colors[i + 1].density > dataAt)
                 )
             {
@@ -224,9 +240,25 @@ public class StipplingVolumeManager : MonoBehaviour
         texture.SetPixels32(colors, 0);
         texture.Apply();
 
-        //AssetDatabase.CreateAsset(texture, "Assets/StippleTextureForDebug.asset");
-        //AssetDatabase.CreateAsset(texture, "Assets/TestStippleTexture.asset");
-        return texture;
+        RenderTexture laplaceTexture = new RenderTexture(255, 255, 0, RenderTextureFormat.ARGB32);
+        laplaceTexture.volumeDepth = 255;
+        laplaceTexture.enableRandomWrite = true;
+        laplaceTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        laplaceTexture.filterMode = FilterMode.Point;
+        laplaceTexture.wrapMode = TextureWrapMode.Clamp;
+        laplaceTexture.useMipMap = false;
+        laplaceTexture.Create();
+
+        var kernelIndex = laplaceComputeShader.FindKernel("LaplaceOperatorV2");
+        ThreadSize threadSize = new ThreadSize();
+        laplaceComputeShader.GetKernelThreadGroupSizes(kernelIndex, out threadSize.x, out threadSize.y, out threadSize.z);
+        laplaceComputeShader.SetTexture(kernelIndex, "Texture", texture);
+        laplaceComputeShader.SetTexture(kernelIndex, "Result", laplaceTexture);
+        laplaceComputeShader.Dispatch(kernelIndex, resulition / (int)threadSize.x, resulition / (int)threadSize.y, resulition / (int)threadSize.z);
+
+        //AssetDatabase.CreateAsset(texture, "Assets/laplaceTexture.asset");
+
+        return laplaceTexture;
     }
 
 
