@@ -38,10 +38,27 @@ public class StipplingVolumeManager : MonoBehaviour
 
     #endregion
 
+
+
+
+
+    // DicomGrid: 
+    // a class that parses a file like Orange.txt to get information about the position, color, etc. of the points to be drawn,
+    // which will be stored in the variable DicomGrid volumeInfo.
     public DicomGrid volumeInfo { get => this.dataObject; }
 
+
+
+    // VolumetricColorAndIntensityPicker:
+    // through the density and intensity in this class to determine the final position of the points to be displayed
     [SerializeField]
     VolumetricColorAndIntensityPicker[] Colors;
+
+
+
+
+
+
 
     // Start is called before the first frame update
     void Awake()
@@ -63,6 +80,13 @@ public class StipplingVolumeManager : MonoBehaviour
         }
     }
 
+
+
+
+
+
+
+
     protected virtual void Start()
     {
         if (volume == null)
@@ -81,14 +105,27 @@ public class StipplingVolumeManager : MonoBehaviour
         }
     }
 
+
+
+
+
+
+
     private void StartMethod()
     {
         material = new Material(shader);
-        material.renderQueue = 3000;     //将材质队列修改为3000
+        material.renderQueue = 3000;     
         GetComponent<MeshFilter>().sharedMesh = Build();
         GetComponent<MeshRenderer>().sharedMaterial = material;
         hasStarted = true;
     }
+
+
+
+
+
+
+
 
     protected void LateUpdate()
     {
@@ -111,11 +148,13 @@ public class StipplingVolumeManager : MonoBehaviour
 
 
 
+
+
+
     // this function made a Mesh as the output, it re-constract the model 
     Mesh Build()
     {
         // the verties for the final cube
-        // 定义一个Vector3数组，分别指向一个正方体的四个顶点
         var vertices = new Vector3[] {
                 new Vector3 (-0.5f, -0.5f, -0.5f),
                 new Vector3 ( 0.5f, -0.5f, -0.5f),
@@ -147,12 +186,23 @@ public class StipplingVolumeManager : MonoBehaviour
         var mesh = new Mesh();
         mesh.vertices = vertices;
         mesh.triangles = triangles;
-        mesh.RecalculateNormals();  // 重新计算法线方向
+        mesh.RecalculateNormals();  
         mesh.hideFlags = HideFlags.HideAndDontSave;
 
         return mesh;
     }
 
+
+
+
+
+
+
+
+    // CreateStippleTexture():
+    // which calculates the parsed dicom data and the parameters set by the user in Unity, such as Colors, 
+    // to get the points drawn and the colors of the corresponding points,
+    // and saves them as a Texture3-Dimensions variable for the next step of rendering
     public Texture3D CreateStippleTexture(uint minThreashold, uint maxThreashold, int resulition, float OddsOfStipple = 1f)
     {
         if (OddsOfStipple > 1)
@@ -228,6 +278,13 @@ public class StipplingVolumeManager : MonoBehaviour
         //AssetDatabase.CreateAsset(texture, "Assets/TestStippleTexture.asset");
         return texture;
     }
+
+
+
+
+
+
+
 
 
     class AABBInt

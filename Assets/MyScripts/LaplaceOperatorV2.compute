@@ -6,6 +6,9 @@
 RWTexture3D<float4> Result;
 Texture3D<float4> Texture;
 
+
+// the 3-Dimensions Texture is divided into 3 planes according to the 7-point stencil, 
+// and each plane can be regarded as a 2D texture.
 [numthreads(8,8,1)]
 void LaplaceOperatorV2(uint3 id : SV_DispatchThreadID)
 {
@@ -16,6 +19,12 @@ void LaplaceOperatorV2(uint3 id : SV_DispatchThreadID)
 
     float4 rgb2gray = float4(0.2126, 0.7152, 0.0722, 0);
     
+
+
+    //For each plane's top-left, top-middle, top-right and other 9 regions,
+    //first perform grayscale calculation (by multiplying with gray vector points),
+    //then multiply with each plane's discrete Laplacian kernel to perform laplace filter for each plane,
+    //and then complete the laplace operator for the whole 3-Dimensions Texture.
     float plane1Arrays[9] =
     {
         dot(Texture[id.xyz + int3(-1, 1, -1)], rgb2gray) * plane1Fliter[0][0],
